@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: '0 17 * * *'
   workflow_dispatch:
+    inputs:
+      date:
+        description: 'Override date (YYYY-MM-DD), 留空则用当天'
+        required: false
+        type: string
+      fps:
+        description: 'Override frame rate, 留空则用环境变量 FPS'
+        required: false
+        type: string
 
 jobs:
   process:
@@ -30,5 +39,6 @@ jobs:
           DEST_S3_SECRET_KEY: ${{ secrets.DEST_S3_SECRET_KEY }}
           DEST_S3_BUCKET: ${{ secrets.DEST_S3_BUCKET }}
           DEST_PREFIX: ${{ secrets.DEST_PREFIX }}
-          FPS: ${{ secrets.FPS }}
+          FPS: ${{ inputs.fps || secrets.FPS }}
+          OVERRIDE_DATE: ${{ inputs.date }}
         run: python main.py

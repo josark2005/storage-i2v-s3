@@ -132,7 +132,11 @@ def main():
         dest_bucket = os.environ["DEST_S3_BUCKET"]
         dest_prefix = os.environ["DEST_PREFIX"]
 
-        date = get_cst_date()
+        date_str = os.environ.get("OVERRIDE_DATE", "")
+        if date_str:
+            date = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone(timedelta(hours=8)))
+        else:
+            date = get_cst_date()
         source_path = build_source_prefix(source_prefix, date)
         dest_base = build_dest_base(dest_prefix, date)
 
