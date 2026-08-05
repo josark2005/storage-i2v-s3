@@ -75,18 +75,18 @@ jobs:
           pip install -r requirements.txt
       - name: Run image-to-video
         env:
-SOURCE_S3_ENDPOINT: ${{ inputs.source_endpoint || secrets.SOURCE_S3_ENDPOINT }}
-          SOURCE_S3_REGION: ${{ inputs.source_region || secrets.SOURCE_S3_REGION }}
-          SOURCE_S3_ACCESS_KEY: ${{ inputs.source_access_key || secrets.SOURCE_S3_ACCESS_KEY }}
-          SOURCE_S3_SECRET_KEY: ${{ inputs.source_secret_key || secrets.SOURCE_S3_SECRET_KEY }}
-          SOURCE_S3_BUCKET: ${{ inputs.source_bucket || secrets.SOURCE_S3_BUCKET }}
-          SOURCE_PREFIX: ${{ inputs.source_prefix || secrets.SOURCE_PREFIX }}
-          DEST_S3_ENDPOINT: ${{ inputs.dest_endpoint || secrets.DEST_S3_ENDPOINT }}
-          DEST_S3_REGION: ${{ inputs.dest_region || secrets.DEST_S3_REGION }}
-          DEST_S3_ACCESS_KEY: ${{ inputs.dest_access_key || secrets.DEST_S3_ACCESS_KEY }}
-          DEST_S3_SECRET_KEY: ${{ inputs.dest_secret_key || secrets.DEST_S3_SECRET_KEY }}
-          DEST_S3_BUCKET: ${{ inputs.dest_bucket || secrets.DEST_S3_BUCKET }}
-          DEST_PREFIX: ${{ inputs.dest_prefix || secrets.DEST_PREFIX }}
-          FPS: ${{ inputs.fps || secrets.FPS }}
-          OVERRIDE_DATE: ${{ inputs.date }}
+          SOURCE_S3_ENDPOINT: ${{ github.event_name == 'workflow_dispatch' && inputs.source_endpoint || secrets.SOURCE_S3_ENDPOINT }}
+          SOURCE_S3_REGION: ${{ github.event_name == 'workflow_dispatch' && inputs.source_region || secrets.SOURCE_S3_REGION }}
+          SOURCE_S3_ACCESS_KEY: ${{ github.event_name == 'workflow_dispatch' && inputs.source_access_key || secrets.SOURCE_S3_ACCESS_KEY }}
+          SOURCE_S3_SECRET_KEY: ${{ github.event_name == 'workflow_dispatch' && inputs.source_secret_key || secrets.SOURCE_S3_SECRET_KEY }}
+          SOURCE_S3_BUCKET: ${{ github.event_name == 'workflow_dispatch' && inputs.source_bucket || secrets.SOURCE_S3_BUCKET }}
+          SOURCE_PREFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.source_prefix || secrets.SOURCE_PREFIX }}
+          DEST_S3_ENDPOINT: ${{ github.event_name == 'workflow_dispatch' && inputs.dest_endpoint || secrets.DEST_S3_ENDPOINT }}
+          DEST_S3_REGION: ${{ github.event_name == 'workflow_dispatch' && inputs.dest_region || secrets.DEST_S3_REGION }}
+          DEST_S3_ACCESS_KEY: ${{ github.event_name == 'workflow_dispatch' && inputs.dest_access_key || secrets.DEST_S3_ACCESS_KEY }}
+          DEST_S3_SECRET_KEY: ${{ github.event_name == 'workflow_dispatch' && inputs.dest_secret_key || secrets.DEST_S3_SECRET_KEY }}
+          DEST_S3_BUCKET: ${{ github.event_name == 'workflow_dispatch' && inputs.dest_bucket || secrets.DEST_S3_BUCKET }}
+          DEST_PREFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.dest_prefix || secrets.DEST_PREFIX }}
+          FPS: ${{ github.event_name == 'workflow_dispatch' && inputs.fps || secrets.FPS }}
+          OVERRIDE_DATE: ${{ github.event_name == 'workflow_dispatch' && inputs.date || '' }}
         run: python main.py
