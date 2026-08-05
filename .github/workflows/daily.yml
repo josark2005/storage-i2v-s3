@@ -1,0 +1,34 @@
+name: Daily Image-to-Video
+
+on:
+  schedule:
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Run image-to-video
+        env:
+          SOURCE_S3_ENDPOINT: ${{ secrets.SOURCE_S3_ENDPOINT }}
+          SOURCE_S3_REGION: ${{ secrets.SOURCE_S3_REGION }}
+          SOURCE_S3_ACCESS_KEY: ${{ secrets.SOURCE_S3_ACCESS_KEY }}
+          SOURCE_S3_SECRET_KEY: ${{ secrets.SOURCE_S3_SECRET_KEY }}
+          SOURCE_S3_BUCKET: ${{ secrets.SOURCE_S3_BUCKET }}
+          SOURCE_PREFIX: ${{ secrets.SOURCE_PREFIX }}
+          DEST_S3_ENDPOINT: ${{ secrets.DEST_S3_ENDPOINT }}
+          DEST_S3_REGION: ${{ secrets.DEST_S3_REGION }}
+          DEST_S3_ACCESS_KEY: ${{ secrets.DEST_S3_ACCESS_KEY }}
+          DEST_S3_SECRET_KEY: ${{ secrets.DEST_S3_SECRET_KEY }}
+          DEST_S3_BUCKET: ${{ secrets.DEST_S3_BUCKET }}
+          DEST_PREFIX: ${{ secrets.DEST_PREFIX }}
+          FPS: ${{ secrets.FPS }}
+        run: python main.py
