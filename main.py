@@ -7,6 +7,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import boto3
+import botocore
 
 
 def get_cst_date() -> datetime:
@@ -21,7 +22,7 @@ def build_dest_base(prefix: str, date: datetime) -> str:
     return f"{prefix}/{date.strftime('%Y-%m-%d')}"
 
 
-def create_s3_client(endpoint: str, region: str, access_key: str, secret_key: str):
+def create_s3_client(endpoint: str, region: str, access_key: str, secret_key: str) -> botocore.client.BaseClient:
     return boto3.client(
         "s3",
         endpoint_url=endpoint,
@@ -72,7 +73,11 @@ def compose_video(image_paths: list[Path], fps: int, output_path: Path) -> float
         "-pix_fmt", "yuv420p",
         str(output_path.resolve()),
     ]
-    subprocess.run(cmd, check=True, capture_output=True, text=True)
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+        print(e.stderr, end="")
+        raise
     concat_file.unlink()
     return duration
 
@@ -102,63 +107,76 @@ def upload_file(s3, bucket: str, key: str, local_path: Path):
 
 
 def main():
-    endpoint = os.environ["SOURCE_S3_ENDPOINT"]
-    region = os.environ["SOURCE_S3_REGION"]
-    access_key = os.environ["SOURCE_S3_ACCESS_KEY"]
-    secret_key = os.environ["SOURCE_S3_SECRET_KEY"]
-    bucket = os.environ["SOURCE_S3_BUCKET"]
-    source_prefix = os.environ["SOURCE_PREFIX"]
-    fps = int(os.environ["FPS"])
+    if not shutil.which("ffmpeg"):
+        print("Error: ffmpeg not found in PATH")
+        sys.exit(1)
 
-    dest_endpoint = os.environ["DEST_S3_ENDPOINT"]
-    dest_region = os.environ["DEST_S3_REGION"]
-    dest_access_key = os.environ["DEST_S3_ACCESS_KEY"]
-    dest_secret_key = os.environ["DEST_S3_SECRET_KEY"]
-    dest_bucket = os.environ["DEST_S3_BUCKET"]
-    dest_prefix = os.environ["DEST_PREFIX"]
-
-    date = get_cst_date()
-    source_path = build_source_prefix(source_prefix, date)
-    dest_base = build_dest_base(dest_prefix, date)
-
-    print(f"Processing date: {date.strftime('%Y-%m-%d')} (UTC+8)")
-    print(f"Source prefix: {source_path}")
-    print(f"Dest base: {dest_base}")
-
-    s3_source = create_s3_client(endpoint, region, access_key, secret_key)
-    s3_dest = create_s3_client(dest_endpoint, dest_region, dest_access_key, dest_secret_key)
-
-    keys = list_images(s3_source, bucket, source_path)
-    if not keys:
-        print("No images found, exiting.")
-        sys.exit(0)
-
-    print(f"Found {len(keys)} images")
-
-    tmpdir = Path(tempfile.mkdtemp(prefix="i2v_"))
     try:
-        local_paths = download_images(s3_source, bucket, keys, tmpdir)
-        print(f"Downloaded {len(local_paths)} images")
+        fps = int(os.environ["FPS"])
+    except ValueError:
+        print(f"Error: FPS must be an integer, got: {os.environ['FPS']}")
+        sys.exit(1)
 
-        output_video = tmpdir / "output.mp4"
-        duration = compose_video(local_paths, fps, output_video)
-        print(f"Video composed: {duration:.2f}s at {fps} fps")
+    try:
+        endpoint = os.environ["SOURCE_S3_ENDPOINT"]
+        region = os.environ["SOURCE_S3_REGION"]
+        access_key = os.environ["SOURCE_S3_ACCESS_KEY"]
+        secret_key = os.environ["SOURCE_S3_SECRET_KEY"]
+        bucket = os.environ["SOURCE_S3_BUCKET"]
+        source_prefix = os.environ["SOURCE_PREFIX"]
 
-        manifest = generate_manifest(source_prefix, date, fps, len(keys), duration, keys)
-        manifest_path = tmpdir / "manifest.txt"
-        manifest_path.write_text(manifest, encoding="utf-8")
+        dest_endpoint = os.environ["DEST_S3_ENDPOINT"]
+        dest_region = os.environ["DEST_S3_REGION"]
+        dest_access_key = os.environ["DEST_S3_ACCESS_KEY"]
+        dest_secret_key = os.environ["DEST_S3_SECRET_KEY"]
+        dest_bucket = os.environ["DEST_S3_BUCKET"]
+        dest_prefix = os.environ["DEST_PREFIX"]
 
-        video_key = f"{dest_base}.mp4"
-        manifest_key = f"{dest_base}.txt"
+        date = get_cst_date()
+        source_path = build_source_prefix(source_prefix, date)
+        dest_base = build_dest_base(dest_prefix, date)
 
-        upload_file(s3_dest, dest_bucket, video_key, output_video)
-        print(f"Uploaded: {video_key}")
-        upload_file(s3_dest, dest_bucket, manifest_key, manifest_path)
-        print(f"Uploaded: {manifest_key}")
+        print(f"Processing date: {date.strftime('%Y-%m-%d')} (UTC+8)")
+        print(f"Source prefix: {source_path}")
+        print(f"Dest base: {dest_base}")
 
-        print("Done.")
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
+        s3_source = create_s3_client(endpoint, region, access_key, secret_key)
+        s3_dest = create_s3_client(dest_endpoint, dest_region, dest_access_key, dest_secret_key)
+
+        keys = list_images(s3_source, bucket, source_path)
+        if not keys:
+            print("No images found, exiting.")
+            sys.exit(0)
+
+        print(f"Found {len(keys)} images")
+
+        tmpdir = Path(tempfile.mkdtemp(prefix="i2v_"))
+        try:
+            local_paths = download_images(s3_source, bucket, keys, tmpdir)
+            print(f"Downloaded {len(local_paths)} images")
+
+            output_video = tmpdir / "output.mp4"
+            duration = compose_video(local_paths, fps, output_video)
+            print(f"Video composed: {duration:.2f}s at {fps} fps")
+
+            manifest = generate_manifest(source_prefix, date, fps, len(keys), duration, keys)
+            manifest_path = tmpdir / "manifest.txt"
+            manifest_path.write_text(manifest, encoding="utf-8")
+
+            video_key = f"{dest_base}.mp4"
+            manifest_key = f"{dest_base}.txt"
+
+            upload_file(s3_dest, dest_bucket, video_key, output_video)
+            print(f"Uploaded: {video_key}")
+            upload_file(s3_dest, dest_bucket, manifest_key, manifest_path)
+            print(f"Uploaded: {manifest_key}")
+
+            print("Done.")
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
