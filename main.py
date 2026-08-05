@@ -11,7 +11,7 @@ import botocore
 
 
 def get_cst_date() -> datetime:
-    return datetime.now(timezone(timedelta(hours=8)))
+    return datetime.now(timezone(timedelta(hours=8))) - timedelta(days=1)
 
 
 def build_source_prefix(prefix: str, date: datetime) -> str:
