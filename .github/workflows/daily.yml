@@ -70,7 +70,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+      - name: Restore cached ffmpeg
+        id: cache-ffmpeg
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/bin/ffmpeg
+          key: ffmpeg-2404
       - name: Install ffmpeg
+        if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install dependencies
         run: pip install -r requirements.txt
