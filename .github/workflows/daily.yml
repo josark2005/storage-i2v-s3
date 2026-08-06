@@ -88,6 +88,6 @@ jobs:
           DEST_S3_SECRET_KEY: ${{ github.event_name == 'workflow_dispatch' && inputs.dest_secret_key || vars.DEST_S3_SECRET_KEY || secrets.DEST_S3_SECRET_KEY }}
           DEST_S3_BUCKET: ${{ github.event_name == 'workflow_dispatch' && inputs.dest_bucket || vars.DEST_S3_BUCKET || secrets.DEST_S3_BUCKET }}
           DEST_PREFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.dest_prefix || vars.DEST_PREFIX || secrets.DEST_PREFIX }}
-          FPS: ${{ github.event_name == 'workflow_dispatch' && inputs.fps || vars.FPS || secrets.FPS }}
+          FPS: ${{ github.event_name == 'workflow_dispatch' && inputs.fps || vars.FPS || secrets.FPS || 24 }}
           OVERRIDE_DATE: ${{ github.event_name == 'workflow_dispatch' && inputs.date || '' }}
         run: python main.py
